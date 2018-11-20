@@ -48,7 +48,5 @@ def main():
             today += 1
     new_offset = last_update_id + 1
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        exit()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
