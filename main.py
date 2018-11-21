@@ -1,63 +1,55 @@
 import requests
-from bottle import Bottle, response, request as bottle_request
+import datetime
+class BotHandler:
+    def __init__(self, token):
+            self.token = token
+            self.api_url = "https://api.telegram.org/bot{}/".format(token)
+    def get_updates(self, offset=None, timeout=30):
+            method = 'getUpdates'
+            params = {'timeout': timeout, 'offset': offset}
+            resp = requests.get(self.api_url + method, params)
+            result_json = resp.json()['result']
+            return result_json
+    def send_message(self, chat_id, text):
+            params = {'chat_id': chat_id, 'text': text}
+            method = 'sendMessage'
+            resp = requests.post(self.api_url + method, params)
+            return resp
+    def get_last_update(self):
+            get_result = self.get_updates()
+    if len(get_result) > 0:
+        last_update = get_result[-1]
+    else:
+        last_update = get_result[len(get_result)]
+return last_update
 
+greet_bot = BotHandler('751365230:AAGAFrTWzYNX1_Qm2D4v6hOoM1dkF7dqP50')
+greetings = ('hello', 'hi', 'greetings', 'sup')
+now = datetime.datetime.now()
+def main():
+    new_offset = None
+    today = now.day
+    hour = now.hour
 
-class BotHandlerMixin:
-    BOT_URL = None
-
-    def get_chat_id(self, data):
-        """
-        Method to extract chat id from telegram request.
-        """
-        chat_id = data['message']['chat']['id']
-
-        return chat_id
-
-    def get_message(self, data):
-        """
-        Method to extract message id from telegram request.
-        """
-        message_text = data['message']['text']
-
-        return message_text
-
-    def send_message(self, prepared_data):
-        """
-        Prepared data should be json which includes at least `chat_id` and `text`
-        """
-        message_url = self.BOT_URL + 'sendMessage'
-        requests.post(message_url, json=prepared_data)
-
-
-class TelegramBot(BotHandlerMixin, Bottle):
-    BOT_URL = 'https://api.telegram.org/bot000000000:aaaaaaaaaaaaaaaaaaaaaaaaaa/'
-
-    def __init__(self, *args, **kwargs):
-        super(TelegramBot, self).__init__()
-        self.route('/', callback=self.post_handler, method="POST")
-
-    def change_text_message(self, text):
-        return text[::-1]
-
-    def prepare_data_for_answer(self, data):
-        message = self.get_message(data)
-        answer = self.change_text_message(message)
-        chat_id = self.get_chat_id(data)
-        json_data = {
-            "chat_id": chat_id,
-            "text": answer,
-        }
-
-        return json_data
-
-    def post_handler(self):
-        data = bottle_request.json
-        answer_data = self.prepare_data_for_answer(data)
-        self.send_message(answer_data)
-
-        return response
-
-
+while True:
+    greet_bot.get_updates(new_offset)
+last_update = greet_bot.get_last_update()
+    last_update_id = last_update['update_id']
+    last_chat_text = last_update['message']['text']
+    last_chat_id = last_update['message']['chat']['id']
+    last_chat_name = last_update['message']['chat']['first_name']
+if last_chat_text.lower() in greetings and today == now.day and 6 <= hour < 12:
+    greet_bot.send_message(last_chat_id, 'Good Morning  {}'.format(last_chat_name))
+    today += 1
+elif last_chat_text.lower() in greetings and today == now.day and 12 <= hour < 17:
+    greet_bot.send_message(last_chat_id, 'Good Afternoon {}'.format(last_chat_name))
+    today += 1
+elif last_chat_text.lower() in greetings and today == now.day and 17 <= hour < 23:
+            greet_bot.send_message(last_chat_id, 'Good Evening  {}'.format(last_chat_name))
+            today += 1
+new_offset = last_update_id + 1
 if __name__ == '__main__':
-    app = TelegramBot()
-    app.run(host='localhost', port=8080)
+    try:
+        main()
+    except KeyboardInterrupt:
+        exit()
